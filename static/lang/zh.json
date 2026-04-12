@@ -58,7 +58,7 @@
   "faqCache": "查询结果会被缓存吗？",
   "faqCacheAnswer": "已注册域名的信息会做短时缓存以加快重复查询。可注册状态不做长时间缓存，确保你看到的是最新结果。",
   "faqPrivacy": "你们会记录我的查询内容吗？",
-  "faqPrivacyAnswer": "dmcheck 不会将查询关键词与用户身份关联存储。服务器日志仅用于排查故障，不会用于分析用户搜索意图或出售数据。",
+  "faqPrivacyAnswer": "dmcheck 不会将查询关键词与用户身份关联存储。我们使用 Google Analytics 收集匿名访问统计。服务器日志仅用于排查故障，不会出售给第三方。",
   "faqAPI": "提供 API 吗？",
   "faqAPIAnswer": "目前没有公开 API。如果你有批量查询或集成需求，可以联系我们讨论。",
   "footerSlogan": "免费的域名注册查询工具，基于 WHOIS 与 RDAP 协议",

@@ -58,7 +58,7 @@
   "faqCache": "Are results cached?",
   "faqCacheAnswer": "Registered domain info is briefly cached to speed up repeat queries. Available status is not cached for long, ensuring you see fresh results.",
   "faqPrivacy": "Do you log my queries?",
-  "faqPrivacyAnswer": "dmcheck does not store query keywords linked to user identity. Server logs are used for troubleshooting only and are never used to analyze search intent or sold to third parties.",
+  "faqPrivacyAnswer": "dmcheck does not store query keywords linked to user identity. We use Google Analytics to collect anonymous traffic statistics. Server logs are used for troubleshooting only and are never sold to third parties.",
   "faqAPI": "Do you offer an API?",
   "faqAPIAnswer": "No public API at the moment. If you have bulk query or integration needs, feel free to contact us.",
   "footerSlogan": "Free domain availability checker powered by WHOIS & RDAP",

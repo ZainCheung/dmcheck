@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -26,6 +27,7 @@ func buildLangPages(sfs fs.FS) {
 		log.Fatalf("Cannot read embedded index.html: %v", err)
 	}
 	template := string(tpl)
+	gaID := os.Getenv("GA_ID")
 
 	langPages = make(map[string][]byte, len(allLangs))
 	for _, lang := range allLangs {
@@ -42,9 +44,19 @@ func buildLangPages(sfs fs.FS) {
 			continue
 		}
 		page := renderTemplate(template, tr, lang)
+		if gaID != "" {
+			page = injectGA(page, gaID)
+		}
 		langPages[lang] = []byte(page)
 		log.Printf("Built %s page (%d bytes)", lang, len(langPages[lang]))
 	}
+}
+
+func injectGA(html, id string) string {
+	snippet := "<script async src=\"https://www.googletagmanager.com/gtag/js?id=" + id + "\"></script>\n" +
+		"<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}" +
+		"gtag('js',new Date());gtag('config','" + id + "');</script>\n"
+	return strings.Replace(html, "</head>", snippet+"</head>", 1)
 }
 
 var (

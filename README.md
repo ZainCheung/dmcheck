@@ -53,13 +53,14 @@ go build -o dmcheck .
 ### Environment variables
 
 
-| Variable     | Default          | Description                          |
-| ------------ | ---------------- | ------------------------------------ |
-| `PORT`       | `3300`           | HTTP server port                     |
-| `REDIS_ADDR` | `localhost:6379` | Redis address (set empty to disable) |
-| `RATE_LIMIT` | `2`              | Requests per second per IP           |
-| `RATE_BURST` | `5`              | Rate limiter burst size              |
+| Variable     | Default          | Description                                                  |
+| ------------ | ---------------- | ------------------------------------------------------------ |
+| `PORT`       | `3300`           | HTTP server port                                             |
+| `REDIS_ADDR` | `localhost:6379` | Redis address (set empty to disable)                         |
+| `RATE_LIMIT` | `2`              | Requests per second per IP                                   |
+| `RATE_BURST` | `5`              | Rate limiter burst size                                      |
 | `CACHE_TTL`  | `5m`             | Cache TTL for available domains; registered/reserved use 24h |
+| `GA_ID`      | (empty)          | Google Analytics Measurement ID (omit to disable)            |
 
 
 ## Project Structure

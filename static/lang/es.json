@@ -58,7 +58,7 @@
   "faqCache": "¿Se almacenan en caché los resultados?",
   "faqCacheAnswer": "La información de dominios registrados se almacena brevemente en caché para acelerar consultas repetidas. El estado de disponibilidad no se almacena en caché por mucho tiempo.",
   "faqPrivacy": "¿Registran mis búsquedas?",
-  "faqPrivacyAnswer": "dmcheck no almacena palabras clave de búsqueda vinculadas a la identidad del usuario. Los registros del servidor se usan solo para solución de problemas.",
+  "faqPrivacyAnswer": "dmcheck no almacena palabras clave de búsqueda vinculadas a la identidad del usuario. Utilizamos Google Analytics para recopilar estadísticas de tráfico anónimas. Los registros del servidor se usan solo para solución de problemas y no se venden a terceros.",
   "faqAPI": "¿Ofrecen una API?",
   "faqAPIAnswer": "Actualmente no hay API pública. Si tiene necesidades de consulta masiva o integración, contáctenos.",
   "footerSlogan": "Herramienta gratuita de consulta de dominios basada en WHOIS y RDAP",
