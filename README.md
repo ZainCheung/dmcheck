@@ -161,6 +161,7 @@ sudo systemctl edit dmcheck
 Environment=RATE_LIMIT=5
 Environment=RATE_BURST=10
 Environment=CACHE_TTL=10m
+Environment=GA_ID=G-XXXXXXXXXX
 ```
 
 Then `sudo systemctl restart dmcheck`.
