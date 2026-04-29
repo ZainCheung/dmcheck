@@ -11,6 +11,8 @@
     light: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
     dark: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'
   };
+  const DOMAIN_LABEL_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+  const TLD_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
 
   const $ = s => document.querySelector(s);
 
@@ -30,10 +32,12 @@
   const loadingText = $('#loadingText');
   const errorSection = $('#errorSection');
   const errorMsg = $('#errorMsg');
+  const formError = $('#formError');
   const panel = $('#detailPanel');
   const panelTitle = $('#panelTitle');
   const panelBody = $('#panelBody');
   const panelOverlay = $('#panelOverlay');
+  const panelClose = $('#panelClose');
   const langSwitch = $('#langSwitch');
   const clearBtn = $('#clearBtn');
   const themeToggle = $('#themeToggle');
@@ -88,6 +92,10 @@
     document.querySelectorAll('[data-i18n-html]').forEach(el => {
       const key = el.getAttribute('data-i18n-html');
       if (translations[key]) el.innerHTML = translations[key];
+    });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+      const key = el.getAttribute('data-i18n-aria-label');
+      if (translations[key]) el.setAttribute('aria-label', translations[key]);
     });
     const htmlLangs = { en: 'en', zh: 'zh-CN', ja: 'ja', ko: 'ko', es: 'es' };
     document.documentElement.lang = htmlLangs[currentLang] || 'en';
@@ -165,13 +173,18 @@
     $('#tldReset').addEventListener('click', resetTlds);
     $('#tldSave').addEventListener('click', saveTldsAndClose);
     tldTextarea.addEventListener('input', saveTlds);
-    $('#panelClose').addEventListener('click', closePanel);
+    tldTextarea.addEventListener('input', clearFormError);
+    panelClose.addEventListener('click', () => closePanel(true));
     panelOverlay.addEventListener('click', closePanel);
     $('#errorDismiss').addEventListener('click', () => setState('idle'));
-    input.addEventListener('input', () => { clearBtn.hidden = !input.value; });
+    input.addEventListener('input', () => {
+      clearBtn.hidden = !input.value;
+      clearFormError();
+    });
     clearBtn.addEventListener('click', () => {
       input.value = '';
       clearBtn.hidden = true;
+      clearFormError();
       input.focus();
     });
     document.addEventListener('keydown', e => {
@@ -230,21 +243,15 @@
     if (show) autoResize(tldTextarea);
   }
 
-  function doSearch() {
-    if (activeSource) { activeSource.close(); activeSource = null; }
+  function isValidLabel(s) {
+    return s.length > 0 && s.length <= 63 && DOMAIN_LABEL_RE.test(s);
+  }
 
-    if (!tldEditor.hidden) saveTldsAndClose();
+  function isValidTld(s) {
+    return s.length > 0 && s.length <= 63 && TLD_RE.test(s);
+  }
 
-    const raw = input.value;
-    const keyword = raw.replace(/[\s\u3000]+/g, '');
-    if (!keyword) return;
-
-    const tlds = getTlds();
-    allResults = [];
-    resultsList.innerHTML = '';
-    closePanel();
-    setState('streaming');
-
+  function prepareSearch(keyword, tlds) {
     var searchKeyword = keyword;
     var searchTlds = tlds.slice();
     var dotIdx = keyword.lastIndexOf('.');
@@ -255,6 +262,73 @@
         searchTlds.unshift(extraTld);
       }
     }
+    return { keyword: searchKeyword, tlds: searchTlds };
+  }
+
+  function validateSearch(keyword, tlds) {
+    if (!keyword) {
+      return { message: T('errorEmptyKeyword'), target: input };
+    }
+
+    var dotIdx = keyword.lastIndexOf('.');
+    var domainLike = dotIdx > 0 && /^[a-zA-Z]{2,}$/.test(keyword.substring(dotIdx + 1));
+    var label = domainLike ? keyword.substring(0, dotIdx) : keyword;
+    if (!isValidLabel(label)) {
+      return { message: T('errorInvalidKeyword'), target: input };
+    }
+
+    for (var i = 0; i < tlds.length; i++) {
+      if (!isValidTld(tlds[i])) {
+        return { message: T('errorInvalidTld').replace('{tld}', tlds[i]), target: tldTextarea };
+      }
+    }
+
+    return null;
+  }
+
+  function showFormError(msg, target) {
+    formError.textContent = msg;
+    formError.hidden = false;
+    input.setAttribute('aria-invalid', target === input ? 'true' : 'false');
+    tldTextarea.setAttribute('aria-invalid', target === tldTextarea ? 'true' : 'false');
+    if (target === tldTextarea && tldEditor.hidden) {
+      tldEditor.hidden = false;
+      tldToggle.textContent = T('tldToggleHide');
+      autoResize(tldTextarea);
+    }
+    target.focus();
+  }
+
+  function clearFormError() {
+    formError.textContent = '';
+    formError.hidden = true;
+    input.removeAttribute('aria-invalid');
+    tldTextarea.removeAttribute('aria-invalid');
+  }
+
+  function doSearch() {
+    const raw = input.value;
+    const keyword = raw.replace(/[\s\u3000]+/g, '');
+    const tlds = getTlds();
+    const validation = validateSearch(keyword, tlds);
+    if (validation) {
+      showFormError(validation.message, validation.target);
+      return;
+    }
+
+    if (activeSource) { activeSource.close(); activeSource = null; }
+
+    if (!tldEditor.hidden) saveTldsAndClose();
+
+    clearFormError();
+    allResults = [];
+    resultsList.innerHTML = '';
+    closePanel(false);
+    setState('streaming');
+
+    var prepared = prepareSearch(keyword, tlds);
+    var searchKeyword = prepared.keyword;
+    var searchTlds = prepared.tlds;
 
     let url = '/api/search?keyword=' + encodeURIComponent(searchKeyword) + '&stream=true';
     url += '&tlds=' + encodeURIComponent(searchTlds.join(','));
@@ -293,7 +367,7 @@
       if (allResults.length > 0) {
         setState('results');
       } else {
-        showError(T('errorNetwork'));
+        showError(T('errorSearchFailed'));
       }
     });
   }
@@ -310,16 +384,18 @@
   }
 
   function showError(msg) {
+    clearFormError();
     errorMsg.textContent = msg;
     setState('error');
   }
 
   function updateStats() {
-    const c = { available: 0, registered: 0, unknown: 0 };
+    const c = { available: 0, registered: 0, reserved: 0, unknown: 0 };
     allResults.forEach(r => { if (c[r.status] !== undefined) c[r.status]++; });
     const parts = [T('statsTotal').replace('{n}', allResults.length)];
     if (c.available) parts.push(T('statsAvailable').replace('{n}', c.available));
     if (c.registered) parts.push(T('statsRegistered').replace('{n}', c.registered));
+    if (c.reserved) parts.push(T('statsReserved').replace('{n}', c.reserved));
     if (c.unknown) parts.push(T('statsUnknown').replace('{n}', c.unknown));
     statsLine.innerHTML = '<span class="stats-brand">dmcheck.app</span>' + esc(parts.join(T('statsSep')));
   }
@@ -330,6 +406,20 @@
     if (!d) return false;
     var diff = Math.floor((new Date() - d) / 86400000);
     return diff >= 0 && diff <= 30;
+  }
+
+  function makeRowOpenable(row, domain) {
+    row.classList.add('clickable');
+    row.setAttribute('role', 'button');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', T('openDetailsLabel').replace('{domain}', domain));
+    row.addEventListener('click', () => openPanel(domain, row));
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openPanel(domain, row);
+      }
+    });
   }
 
   function buildRow(r) {
@@ -355,6 +445,7 @@
       const copyBtn = document.createElement('button');
       copyBtn.className = 'copy-btn';
       copyBtn.textContent = T('copyBtn');
+      copyBtn.setAttribute('aria-label', T('copyDomainLabel').replace('{domain}', r.domain));
       copyBtn.addEventListener('click', e => {
         e.stopPropagation();
         copyDomain(r.domain, copyBtn);
@@ -373,10 +464,16 @@
       } else if (r.expires) {
         meta.textContent = T('labelExpires') + ' ' + shortDate(r.expires);
       }
-      row.appendChild(meta);
+      if (meta.textContent) {
+        row.appendChild(meta);
+      } else {
+        const tag = document.createElement('span');
+        tag.className = 'result-tag registered';
+        tag.textContent = T('tagRegistered');
+        row.appendChild(tag);
+      }
 
-      row.classList.add('clickable');
-      row.addEventListener('click', () => openPanel(r.domain, row));
+      makeRowOpenable(row, r.domain);
     } else if (r.status === 'reserved') {
       row.classList.add('row-reserved');
 
@@ -385,8 +482,7 @@
       tag.textContent = T('tagReserved');
       row.appendChild(tag);
 
-      row.classList.add('clickable');
-      row.addEventListener('click', () => openPanel(r.domain, row));
+      makeRowOpenable(row, r.domain);
     } else {
       row.classList.add('row-unknown');
       const meta = document.createElement('span');
@@ -394,8 +490,7 @@
       meta.textContent = T('tagUnknown');
       row.appendChild(meta);
 
-      row.classList.add('clickable');
-      row.addEventListener('click', () => openPanel(r.domain, row));
+      makeRowOpenable(row, r.domain);
     }
 
     item.appendChild(row);
@@ -466,15 +561,23 @@
   }
 
   function openPanel(domain, row) {
-    if (activeRow) activeRow.classList.remove('active');
+    if (activeRow) {
+      activeRow.classList.remove('active');
+      activeRow.removeAttribute('aria-current');
+    }
     activeRow = row;
     row.classList.add('active');
+    row.setAttribute('aria-current', 'true');
 
     panelTitle.textContent = domain;
     panelBody.innerHTML = '<p class="panel-status-hint" style="opacity:0.5">' + esc(T('panelLoading')) + '</p>';
+    panel.hidden = false;
     panel.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    panel.inert = false;
     panelOverlay.hidden = false;
     requestAnimationFrame(() => panelOverlay.classList.add('visible'));
+    panelClose.focus({ preventScroll: true });
 
     fetch('/api/whois/' + encodeURIComponent(domain))
       .then(res => { if (!res.ok) throw new Error(); return res.json(); })
@@ -484,11 +587,24 @@
       });
   }
 
-  function closePanel() {
+  function closePanel(restoreFocus) {
     panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.inert = true;
     panelOverlay.classList.remove('visible');
-    setTimeout(() => { panelOverlay.hidden = true; }, 250);
-    if (activeRow) { activeRow.classList.remove('active'); activeRow = null; }
+    setTimeout(() => {
+      panel.hidden = true;
+      panelOverlay.hidden = true;
+    }, 250);
+    if (activeRow) {
+      var row = activeRow;
+      row.classList.remove('active');
+      row.removeAttribute('aria-current');
+      activeRow = null;
+      if (restoreFocus !== false && document.body.contains(row)) {
+        row.focus({ preventScroll: true });
+      }
+    }
   }
 
   function renderPanel(data) {
@@ -521,11 +637,12 @@
     }
 
     var d = esc(data.domain);
-    html += '<div class="preview-shot-wrap">' +
-        '<img class="preview-shot" src="https://screenshot.domains/' + d + '" alt="' + esc(T('screenshotAlt')) + '" loading="lazy" onerror="this.closest(\'.preview-shot-wrap\').style.display=\'none\'">' +
+    html += '<div class="preview-placeholder">' +
+        '<p class="preview-placeholder-title">' + esc(T('previewPlaceholderTitle')) + '</p>' +
+        '<p class="preview-placeholder-text">' + esc(T('previewPlaceholderText')) + '</p>' +
+        '<button type="button" class="preview-load-btn">' + esc(T('loadPreviewBtn')) + '</button>' +
       '</div>' +
       '<div class="preview-site-link">' +
-        '<img class="preview-favicon" src="https://favicon.im/' + d + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' +
         '<a href="http://' + d + '" target="_blank" rel="noopener">' + d + ' ↗</a>' +
       '</div>';
 
@@ -559,6 +676,35 @@
     }
 
     panelBody.innerHTML = html;
+    bindPanelPreview(data.domain);
+  }
+
+  function bindPanelPreview(domain) {
+    const btn = panelBody.querySelector('.preview-load-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => loadPreview(domain));
+  }
+
+  function loadPreview(domain) {
+    const wrap = panelBody.querySelector('.preview-placeholder');
+    if (!wrap) return;
+    wrap.className = 'preview-shot-wrap preview-shot-loading';
+    wrap.innerHTML = '<p class="panel-status-hint">' + esc(T('previewLoading')) + '</p>';
+
+    const img = document.createElement('img');
+    img.className = 'preview-shot';
+    img.alt = T('screenshotAlt');
+    img.loading = 'lazy';
+    img.addEventListener('load', () => {
+      wrap.className = 'preview-shot-wrap';
+      wrap.innerHTML = '';
+      wrap.appendChild(img);
+    });
+    img.addEventListener('error', () => {
+      wrap.className = 'preview-placeholder preview-placeholder-error';
+      wrap.innerHTML = '<p class="preview-placeholder-title">' + esc(T('previewLoadFail')) + '</p>';
+    });
+    img.src = 'https://screenshot.domains/' + encodeURIComponent(domain);
   }
 
   function infoRow(label, value) {
