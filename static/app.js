@@ -45,6 +45,7 @@
   let allResults = [];
   let activeSource = null;
   let activeRow = null;
+  let panelRequestSeq = 0;
 
   let currentLang = 'en';
   let currentTheme = 'auto';
@@ -457,14 +458,17 @@
 
       const meta = document.createElement('span');
       meta.className = 'result-meta';
-      if (r.registered && r.expires) {
-        meta.textContent = shortDate(r.registered) + ' ~ ' + shortDate(r.expires);
-      } else if (r.registered) {
-        meta.textContent = shortDate(r.registered);
-      } else if (r.expires) {
-        meta.textContent = T('labelExpires') + ' ' + shortDate(r.expires);
+      if (r.registered) {
+        const label = document.createElement('span');
+        label.className = 'result-meta-label';
+        label.textContent = T('listRegisteredPrefix');
+        const value = document.createElement('span');
+        value.className = 'result-meta-date';
+        value.textContent = shortDate(r.registered);
+        meta.appendChild(label);
+        meta.appendChild(value);
       }
-      if (meta.textContent) {
+      if (meta.textContent.trim()) {
         row.appendChild(meta);
       } else {
         const tag = document.createElement('span');
@@ -561,6 +565,7 @@
   }
 
   function openPanel(domain, row) {
+    const seq = ++panelRequestSeq;
     if (activeRow) {
       activeRow.classList.remove('active');
       activeRow.removeAttribute('aria-current');
@@ -579,10 +584,29 @@
     requestAnimationFrame(() => panelOverlay.classList.add('visible'));
     panelClose.focus({ preventScroll: true });
 
+    const localPreview = allResults.find(r => r.domain === domain);
+    if (localPreview) renderPanelPreview(localPreview);
+
+    fetch('/api/whois/' + encodeURIComponent(domain) + '?preview=true')
+      .then(res => {
+        if (res.status === 204) return null;
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then(data => {
+        if (seq !== panelRequestSeq || !data) return;
+        renderPanelPreview(data);
+      })
+      .catch(() => {});
+
     fetch('/api/whois/' + encodeURIComponent(domain))
       .then(res => { if (!res.ok) throw new Error(); return res.json(); })
-      .then(data => renderPanel(data))
+      .then(data => {
+        if (seq !== panelRequestSeq) return;
+        renderPanel(data);
+      })
       .catch(() => {
+        if (seq !== panelRequestSeq) return;
         panelBody.innerHTML = '<p class="panel-status-hint" style="color:var(--c-red)">' + esc(T('panelLoadFail')) + '</p>';
       });
   }
@@ -605,6 +629,35 @@
         row.focus({ preventScroll: true });
       }
     }
+    panelRequestSeq++;
+  }
+
+  function renderPanelPreview(data) {
+    let html = '<p class="panel-status-hint" style="opacity:0.55">' + esc(T('panelLoadingDetails')) + '</p>';
+
+    if (data.status === 'available') {
+      html += '<p class="panel-status-hint" style="color:var(--c-green)">' + esc(T('panelAvailable')) + '</p>';
+      panelBody.innerHTML = html;
+      return;
+    }
+
+    if (data.status === 'reserved') {
+      html += '<p class="panel-status-hint" style="color:var(--c-orange)">' + esc(T('panelReserved')) + '</p>';
+      panelBody.innerHTML = html;
+      return;
+    }
+
+    if (data.status === 'unknown') {
+      html += '<p class="panel-status-hint">' + esc(T('panelUnknown')) + '</p>';
+      panelBody.innerHTML = html;
+      return;
+    }
+
+    html += '<p class="panel-section-title">' + esc(T('sectionBasic')) + '</p>';
+    html += '<div class="info-grid">';
+    if (data.registered) html += infoRow(T('labelRegistered'), formatDate(data.registered));
+    html += '</div>';
+    panelBody.innerHTML = html;
   }
 
   function renderPanel(data) {
@@ -737,9 +790,7 @@
     if (diff === 0) return T('dateToday');
     if (diff === 1) return T('dateYesterday');
     if (diff >= 2 && diff <= 6) return T('dateDaysAgo').replace('{n}', diff);
-    if (diff >= 7 && diff <= 13) return T('dateLastWeek');
-    if (diff >= 14 && diff <= 30) return T('dateWeeksAgo').replace('{n}', Math.floor(diff / 7));
-    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+    return formatDate(s);
   }
 
   function formatDate(s) {

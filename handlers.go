@@ -47,7 +47,7 @@ func handleSearch(rdb *redis.Client) http.HandlerFunc {
 			return
 		}
 
-		keyword := stripSpaces(r.URL.Query().Get("keyword"))
+		keyword := normalizeDomain(stripSpaces(r.URL.Query().Get("keyword")))
 		if keyword == "" {
 			writeError(w, http.StatusBadRequest, "keyword is required")
 			return
@@ -67,7 +67,7 @@ func handleSearch(rdb *redis.Client) http.HandlerFunc {
 		if !hasTLD {
 			if tldParam != "" {
 				for _, t := range strings.Split(tldParam, ",") {
-					t = strings.TrimSpace(t)
+					t = normalizeDomain(t)
 					if t != "" {
 						tlds = append(tlds, t)
 					}
@@ -193,20 +193,30 @@ func handleWhois(rdb *redis.Client) http.HandlerFunc {
 			return
 		}
 
-		domain := strings.TrimPrefix(r.URL.Path, "/api/whois/")
-		domain = strings.TrimSpace(domain)
+		domain := normalizeDomain(strings.TrimPrefix(r.URL.Path, "/api/whois/"))
 
 		if domain == "" || !strings.Contains(domain, ".") {
 			writeError(w, http.StatusBadRequest, "invalid domain")
 			return
 		}
 
+		if r.URL.Query().Get("preview") == "true" {
+			if cached, ok := getCache(r.Context(), rdb, domain); ok {
+				writeJSON(w, http.StatusOK, cached)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		result := CheckDomain(domain)
+		setCache(r.Context(), rdb, domain, result)
 		writeJSON(w, http.StatusOK, result)
 	}
 }
 
 func checkWithCache(ctx context.Context, rdb *redis.Client, domain string) DomainResult {
+	domain = normalizeDomain(domain)
 	if cached, ok := getCache(ctx, rdb, domain); ok {
 		return cached
 	}
@@ -219,7 +229,7 @@ func getCache(ctx context.Context, rdb *redis.Client, domain string) (DomainResu
 	if rdb == nil {
 		return DomainResult{}, false
 	}
-	val, err := rdb.Get(ctx, "dq:"+domain).Result()
+	val, err := rdb.Get(ctx, cacheKey(domain)).Result()
 	if err != nil {
 		return DomainResult{}, false
 	}
@@ -231,7 +241,11 @@ func getCache(ctx context.Context, rdb *redis.Client, domain string) (DomainResu
 }
 
 func setCache(ctx context.Context, rdb *redis.Client, domain string, result DomainResult) {
-	if rdb == nil || result.Status == "unknown" {
+	if rdb == nil {
+		return
+	}
+	ttl, ok := cacheTTL(result, time.Now())
+	if !ok {
 		return
 	}
 	lite := DomainResult{
@@ -244,12 +258,62 @@ func setCache(ctx context.Context, rdb *redis.Client, domain string, result Doma
 	if err != nil {
 		return
 	}
-	ttl := CacheTTL
-	if result.Status == "registered" || result.Status == "reserved" {
-		ttl = 24 * time.Hour
-	}
-	if err := rdb.Set(ctx, "dq:"+domain, data, ttl).Err(); err != nil {
+	if err := rdb.Set(ctx, cacheKey(domain), data, ttl).Err(); err != nil {
 		log.Printf("redis SET error for %s: %v", domain, err)
+	}
+}
+
+func cacheKey(domain string) string {
+	return "dq:" + normalizeDomain(domain)
+}
+
+func normalizeDomain(domain string) string {
+	return strings.ToLower(strings.TrimSpace(domain))
+}
+
+func cacheTTL(result DomainResult, now time.Time) (time.Duration, bool) {
+	switch result.Status {
+	case "available":
+		if AvailableCacheTTL <= 0 {
+			return 0, false
+		}
+		return AvailableCacheTTL, true
+	case "reserved":
+		if RegisteredCacheTTL <= 0 {
+			return 0, false
+		}
+		return RegisteredCacheTTL, true
+	case "registered":
+		if RegisteredCacheTTL <= 0 {
+			return 0, false
+		}
+		ttl := RegisteredCacheTTL
+		if result.Expires == "" {
+			if ttl > 24*time.Hour {
+				ttl = 24 * time.Hour
+			}
+			return ttl, true
+		}
+		expiresAt, err := time.Parse(time.RFC3339, result.Expires)
+		if err != nil {
+			if ttl > 24*time.Hour {
+				ttl = 24 * time.Hour
+			}
+			return ttl, true
+		}
+		untilRefresh := expiresAt.Sub(now) - 24*time.Hour
+		if untilRefresh <= 0 {
+			return time.Hour, true
+		}
+		if untilRefresh < ttl {
+			ttl = untilRefresh
+		}
+		if ttl < time.Hour {
+			ttl = time.Hour
+		}
+		return ttl, true
+	default:
+		return 0, false
 	}
 }
 

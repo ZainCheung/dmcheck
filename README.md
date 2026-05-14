@@ -59,7 +59,9 @@ go build -o dmcheck .
 | `REDIS_ADDR` | `localhost:6379` | Redis address (set empty to disable)                         |
 | `RATE_LIMIT` | `2`              | Requests per second per IP                                   |
 | `RATE_BURST` | `5`              | Rate limiter burst size                                      |
-| `CACHE_TTL`  | `5m`             | Cache TTL for available domains; registered/reserved use 24h |
+| `AVAILABLE_CACHE_TTL` | `0`              | Cache TTL for available domains; `0` disables available-result caching |
+| `REGISTERED_CACHE_TTL` | `2160h`          | Max cache TTL for registered/reserved domains; registered domains are refreshed before expiry |
+| `CACHE_TTL`  | (empty)          | Legacy alias for `AVAILABLE_CACHE_TTL`                       |
 | `GA_ID`      | (empty)          | Google Analytics Measurement ID (omit to disable)            |
 
 
@@ -160,7 +162,7 @@ sudo systemctl edit dmcheck
 [Service]
 Environment=RATE_LIMIT=5
 Environment=RATE_BURST=10
-Environment=CACHE_TTL=10m
+Environment=REGISTERED_CACHE_TTL=2160h
 Environment=GA_ID=G-XXXXXXXXXX
 ```
 

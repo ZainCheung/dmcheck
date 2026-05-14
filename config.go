@@ -15,9 +15,10 @@ import (
 var configFiles embed.FS
 
 var (
-	CacheTTL  = 5 * time.Minute
-	RateLimit = rate.Limit(2)
-	RateBurst = 5
+	AvailableCacheTTL  time.Duration
+	RegisteredCacheTTL = 90 * 24 * time.Hour
+	RateLimit          = rate.Limit(2)
+	RateBurst          = 5
 )
 
 func loadConfig() {
@@ -73,7 +74,17 @@ func loadEnvConfig() {
 	}
 	if v := os.Getenv("CACHE_TTL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
-			CacheTTL = d
+			AvailableCacheTTL = d
+		}
+	}
+	if v := os.Getenv("AVAILABLE_CACHE_TTL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			AvailableCacheTTL = d
+		}
+	}
+	if v := os.Getenv("REGISTERED_CACHE_TTL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			RegisteredCacheTTL = d
 		}
 	}
 }
