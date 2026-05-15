@@ -1,5 +1,7 @@
 # dmcheck
 
+Languages: English | [简体中文](README.zh-CN.md)
+
 **[dmcheck.app](https://dmcheck.app)** — Free domain availability checker powered by WHOIS & RDAP.
 
 Enter a keyword, instantly check whether domains across multiple TLDs are available — results stream back in real time.
@@ -11,6 +13,7 @@ Enter a keyword, instantly check whether domains across multiple TLDs are availa
 - **83 TLDs** preconfigured with WHOIS servers; 1000+ TLDs supported via RDAP fallback
 - **Customizable TLD list** — users can edit their TLD list in-browser (saved to localStorage)
 - **Domain detail panel** — registration dates, registrar, DNS servers, status codes, raw WHOIS, site screenshot & favicon
+- **Registrar links and price comparison** — available domains can show configured registrar links, first-year USD reference prices, and a detail-drawer comparison
 - **Reserved domain detection** — identifies registry-reserved domains separately from registered or available
 - **Multi-language** — English (default), 中文, 日本語, 한국어, Español
 - **Redis caching** — optional; gracefully degrades to no-cache mode
@@ -22,6 +25,7 @@ Enter a keyword, instantly check whether domains across multiple TLDs are availa
 ### Prerequisites
 
 - Go 1.21+
+- Node.js 18+ for refreshing registrar price references
 - (Optional) Redis for caching
 
 ### Run locally
@@ -48,6 +52,39 @@ go build -o dmcheck .
 | --------------------------- | ------------------------------- |
 | `config/whois-servers.json` | TLD → WHOIS server mapping      |
 | `config/default-tlds.json`  | Default TLD list shown to users |
+| `config/registrar-prices.json` | Registrar link templates and configured TLD price references |
+
+
+### Updating registrar price references
+
+`config/registrar-prices.json` contains two related but separate things: enabled registrar channels for outbound registration/search links, and automated price rows for the comparison UI. A registrar can be available as a link-only channel even when it is not used for automated pricing.
+
+Current coverage as of `config/registrar-prices.json` `updated_at=2026-05-15`: 5 enabled registrar channels, 833 priced TLDs total, including 204 multi-label TLDs.
+
+| Registrar | User-facing channel | Automated price rows | Update mode | Notes |
+| --------- | ------------------- | -------------------- | ----------- | ----- |
+| Cloudflare Registrar | Registration dashboard link | 0 | Link only | Cloudflare publishes registrar positioning and supported TLD information, but not a broad public price table suitable for unattended refreshes. |
+| Porkbun | Registration/search link and price comparison | 632 | Automated from official public pricing page | Used for broad TLD coverage. |
+| Namecheap | Registration/search link | 0 | Link only | Public pricing pages block scripted refresh and the official pricing API requires account credentials. |
+| Spaceship | Registration/search link | 0 | Link only | A public domain pricing page exists at `https://www.spaceship.com/domains/` and exposes more rows through a "See more" UI, but the unattended updater receives Cloudflare verification from Node, curl, and headless Chrome. The official API also requires key/secret credentials, so this stays link-only until there is a stable non-interactive source. |
+| Dynadot | Registration/search link and price comparison | 810 | Automated from official public pricing page | Used for broad TLD coverage, including many multi-label TLDs. |
+
+NameSilo and GoDaddy have been evaluated but are not enabled channels in the current config. They are kept out until we have a stable unattended source or an intentional credential-backed integration.
+
+```bash
+node scripts/update-registrar-prices.mjs --date=YYYY-MM-DD
+```
+
+Update mechanism:
+
+- Run the script from the repo root weekly and before each release that changes registrar behavior.
+- The script fetches the official Porkbun and Dynadot pricing pages, parses first-year registration and renewal prices, removes price rows from non-automated sources, sorts the generated data, and writes `config/registrar-prices.json`.
+- The script refuses to overwrite the config if Porkbun returns fewer than 100 rows or Dynadot returns fewer than 300 rows, which helps avoid replacing the price table with an anti-bot or transient error page.
+- Review the printed coverage counts after every refresh, then commit the generated `config/registrar-prices.json` only when both automated sources pass their guards.
+
+If a source starts failing consistently, leave it out of automated pricing until it has a stable public feed again.
+
+Providers intentionally not automated or priced: Namecheap, NameSilo, Spaceship, and GoDaddy require account/API credentials, browser-only interaction, or block scripted access to public pricing pages; Cloudflare publishes registrar positioning and supported TLD information but not a broad public price table suitable for unattended refreshes.
 
 
 ### Environment variables
@@ -75,7 +112,10 @@ go build -o dmcheck .
 ├── config.go            # Configuration loading
 ├── config/
 │   ├── whois-servers.json
-│   └── default-tlds.json
+│   ├── default-tlds.json
+│   └── registrar-prices.json
+├── scripts/
+│   └── update-registrar-prices.mjs
 ├── static/
 │   ├── index.html       # Main page
 │   ├── app.js           # Frontend logic + i18n
@@ -174,6 +214,7 @@ Then `sudo systemctl restart dmcheck`.
 - [rdap.org](https://rdap.org) — RDAP query fallback
 - [screenshot.domains](https://screenshot.domains) — website screenshots
 - [favicon.im](https://favicon.im) — website favicons
+- [Porkbun domain pricing](https://porkbun.com/products/domains/) and [Dynadot domain pricing](https://www.dynadot.com/domain/prices) are used as registration price references
 
 ## Contributing
 

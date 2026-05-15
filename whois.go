@@ -13,15 +13,16 @@ import (
 )
 
 type DomainResult struct {
-	Domain       string   `json:"domain"`
-	Status       string   `json:"status"`
-	Registered   string   `json:"registered,omitempty"`
-	Expires      string   `json:"expires,omitempty"`
-	Updated      string   `json:"updated,omitempty"`
-	Registrar    string   `json:"registrar,omitempty"`
-	Nameservers  []string `json:"nameservers,omitempty"`
-	DomainStatus []string `json:"domain_status,omitempty"`
-	RawWhois     string   `json:"raw_whois,omitempty"`
+	Domain              string               `json:"domain"`
+	Status              string               `json:"status"`
+	Registered          string               `json:"registered,omitempty"`
+	Expires             string               `json:"expires,omitempty"`
+	Updated             string               `json:"updated,omitempty"`
+	Registrar           string               `json:"registrar,omitempty"`
+	Nameservers         []string             `json:"nameservers,omitempty"`
+	DomainStatus        []string             `json:"domain_status,omitempty"`
+	RawWhois            string               `json:"raw_whois,omitempty"`
+	RegistrationOptions []RegistrationOption `json:"registration_options,omitempty"`
 }
 
 var whoisServers = map[string]string{}
@@ -174,7 +175,7 @@ type rdapEvent struct {
 }
 
 type rdapEntity struct {
-	Roles     []string    `json:"roles"`
+	Roles      []string    `json:"roles"`
 	VcardArray interface{} `json:"vcardArray"`
 }
 

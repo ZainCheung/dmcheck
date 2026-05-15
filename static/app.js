@@ -64,6 +64,7 @@
   let allResults = [];
   let activeSource = null;
   let activeRow = null;
+  let panelRestoreTarget = null;
   let panelRequestSeq = 0;
   let currentSearchKeyword = '';
   let currentExpected = DEFAULT_TLDS.length;
@@ -551,6 +552,7 @@
 
     if (r.status === 'available') {
       const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
       copyBtn.className = 'copy-chip';
       copyBtn.textContent = T('copyBtn');
       copyBtn.setAttribute('aria-label', T('copyDomainLabel').replace('{domain}', r.domain));
@@ -559,28 +561,66 @@
         copyDomain(r.domain, copyBtn);
       });
       domain.appendChild(copyBtn);
-      row.dataset.copyable = 'true';
-      row.setAttribute('role', 'button');
-      row.setAttribute('tabindex', '0');
-      row.setAttribute('aria-label', T('copyDomainLabel').replace('{domain}', r.domain));
-      row.addEventListener('click', () => copyDomain(r.domain, copyBtn));
-      row.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          copyDomain(r.domain, copyBtn);
-        }
-      });
     } else {
       makeRowOpenable(row, r.domain);
     }
 
     const resultCell = document.createElement('div');
     resultCell.className = 'result-cell';
-    resultCell.appendChild(buildResultValue(r, recent));
+    if (r.status === 'available') {
+      resultCell.appendChild(buildAvailableActions(r));
+    } else {
+      resultCell.appendChild(buildResultValue(r, recent));
+    }
 
     row.appendChild(domain);
     row.appendChild(resultCell);
     return row;
+  }
+
+  function buildAvailableActions(r) {
+    const wrap = document.createElement('div');
+    wrap.className = 'available-actions';
+    wrap.appendChild(buildResultValue(r, false));
+
+    const options = registrationOptions(r);
+    const lowest = lowestRegistrationOption(r);
+    const primary = lowest || options[0];
+    if (lowest && lowest.registration_usd) {
+      const price = document.createElement('span');
+      price.className = 'price-chip';
+      price.textContent = formatUSD(lowest.registration_usd) + T('pricePerYearShort');
+      price.title = T('priceRegistrarTitle')
+        .replace('{registrar}', lowest.registrar_name)
+        .replace('{date}', lowest.updated_at || '');
+      wrap.appendChild(price);
+    }
+    if (primary && primary.register_url) {
+      const register = document.createElement('a');
+      register.className = 'register-link';
+      register.href = primary.register_url;
+      register.target = '_blank';
+      register.rel = optionRel(primary);
+      register.textContent = T('registerBtn');
+      register.setAttribute('aria-label', T('registerDomainLabel')
+        .replace('{domain}', r.domain)
+        .replace('{registrar}', primary.registrar_name));
+      register.addEventListener('click', e => e.stopPropagation());
+      wrap.appendChild(register);
+    }
+    if (options.length > 1) {
+      const compare = document.createElement('button');
+      compare.type = 'button';
+      compare.className = 'compare-chip';
+      compare.textContent = T('compareBtn');
+      compare.setAttribute('aria-label', T('compareRegistrarsLabel').replace('{domain}', r.domain));
+      compare.addEventListener('click', e => {
+        e.stopPropagation();
+        openPanel(r.domain, compare.closest('.domain-row') || compare, compare);
+      });
+      wrap.appendChild(compare);
+    }
+    return wrap;
   }
 
   function buildResultValue(r, recent) {
@@ -924,7 +964,10 @@
 
   function snapshotResultText(r) {
     const recent = r.status === 'registered' && isRecentDate(r.registered);
-    if (r.status === 'available') return T('tagAvailable');
+    if (r.status === 'available') {
+      const lowest = lowestRegistrationOption(r);
+      return lowest && lowest.registration_usd ? formatUSD(lowest.registration_usd) + T('pricePerYearShort') : T('tagAvailable');
+    }
     if (r.status === 'reserved') return T('tagReserved');
     if (r.status === 'unknown') return T('tagUnknown');
     if (recent) return shortDate(r.registered);
@@ -1124,13 +1167,14 @@
     return '"SF Mono", "Cascadia Code", "Roboto Mono", ui-monospace, monospace';
   }
 
-  function openPanel(domain, row) {
+  function openPanel(domain, row, restoreTarget) {
     const seq = ++panelRequestSeq;
     if (activeRow) {
       activeRow.classList.remove('active');
       activeRow.removeAttribute('aria-current');
     }
     activeRow = row;
+    panelRestoreTarget = restoreTarget || row;
     row.classList.add('active');
     row.setAttribute('aria-current', 'true');
 
@@ -1184,11 +1228,13 @@
     }, 140);
     if (activeRow) {
       var row = activeRow;
+      var restoreTarget = panelRestoreTarget;
       row.classList.remove('active');
       row.removeAttribute('aria-current');
       activeRow = null;
-      if (restoreFocus !== false && document.body.contains(row)) {
-        row.focus({ preventScroll: true });
+      panelRestoreTarget = null;
+      if (restoreFocus !== false && restoreTarget && document.body.contains(restoreTarget)) {
+        restoreTarget.focus({ preventScroll: true });
       }
     }
     panelRequestSeq++;
@@ -1199,6 +1245,7 @@
 
     if (data.status === 'available') {
       html += '<p class="panel-status-hint" style="color:var(--c-green)">' + esc(T('panelAvailable')) + '</p>';
+      html += registrationPanelHtml(data);
       panelBody.innerHTML = html;
       return;
     }
@@ -1227,6 +1274,7 @@
 
     if (data.status === 'available') {
       html += '<p class="panel-status-hint" style="color:var(--c-green)">' + esc(T('panelAvailable')) + '</p>';
+      html += registrationPanelHtml(data);
       panelBody.innerHTML = html;
       return;
     }
@@ -1325,6 +1373,56 @@
 
   function infoRow(label, value) {
     return '<span class="info-label">' + esc(label) + '</span><span class="info-value">' + value + '</span>';
+  }
+
+  function registrationPanelHtml(data) {
+    const options = registrationOptions(data);
+    let html = '<p class="panel-section-title">' + esc(T('sectionRegistrationOptions')) + '</p>';
+    if (!options.length) {
+      return html + '<p class="panel-status-hint">' + esc(T('registrationNoPrices')) + '</p>';
+    }
+    html += '<div class="registrar-list">';
+    options.forEach(option => {
+      const hasPrice = Boolean(option.registration_usd);
+      const priceText = hasPrice ? formatUSD(option.registration_usd) + T('pricePerYearShort') : T('priceUnavailable');
+      const renewText = option.renewal_usd ? T('renewalPrice').replace('{price}', formatUSD(option.renewal_usd)) : T('renewalUnknown');
+      const source = option.source_url ? '<a href="' + esc(option.source_url) + '" target="_blank" rel="noopener noreferrer">' + esc(T('priceSource')) + '</a>' : '';
+      html += '<div class="registrar-option' + (option.is_lowest ? ' lowest' : '') + '">' +
+        '<div class="registrar-main">' +
+          '<strong>' + esc(option.registrar_name) + '</strong>' +
+          (option.is_lowest ? '<span class="lowest-mark">' + esc(T('lowestPrice')) + '</span>' : '') +
+        '</div>' +
+        '<div class="registrar-price">' + esc(priceText) + '</div>' +
+        '<div class="registrar-meta">' + esc(renewText) + (source ? ' · ' + source : '') + '</div>' +
+        '<a class="registrar-register" href="' + esc(option.register_url) + '" target="_blank" rel="' + esc(optionRel(option)) + '">' +
+          esc(T('registerAt').replace('{registrar}', option.registrar_name)) +
+        '</a>' +
+      '</div>';
+    });
+    html += '</div>';
+    const updated = options.find(option => option.updated_at);
+    if (updated) {
+      html += '<p class="price-disclaimer">' + esc(T('priceDisclaimer').replace('{date}', updated.updated_at)) + '</p>';
+    }
+    return html;
+  }
+
+  function registrationOptions(data) {
+    return Array.isArray(data && data.registration_options) ? data.registration_options : [];
+  }
+
+  function lowestRegistrationOption(data) {
+    return registrationOptions(data).find(option => option.is_lowest) || null;
+  }
+
+  function formatUSD(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    return '$' + n.toFixed(2);
+  }
+
+  function optionRel(option) {
+    return option && option.sponsored ? 'noopener noreferrer sponsored' : 'noopener noreferrer';
   }
 
   function formatStatusCode(raw) {
