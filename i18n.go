@@ -5,8 +5,11 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"os/exec"
 	"regexp"
+	"runtime/debug"
 	"strings"
+	"time"
 )
 
 var allLangs = []string{"en", "zh", "ja", "ko", "es"}
@@ -60,14 +63,15 @@ func injectGA(html, id string) string {
 }
 
 var (
-	reHtmlLang    = regexp.MustCompile(`<html\s+lang="[^"]*"`)
-	reLangOption  = regexp.MustCompile(`(<option\s+value="([^"]+)")\s*selected?\s*`)
+	reHtmlLang   = regexp.MustCompile(`<html\s+lang="[^"]*"`)
+	reLangOption = regexp.MustCompile(`(<option\s+value="([^"]+)")\s*selected?\s*`)
 )
 
 func renderTemplate(tpl string, tr map[string]string, lang string) string {
 	result := replaceI18nAttrs(tpl, tr)
 	result = replacePlaceholders(result, tr)
 	result = replaceContentAttrs(result, tr)
+	result = replaceSEOPlaceholders(result, lang)
 
 	if htmlLang, ok := htmlLangMap[lang]; ok {
 		result = reHtmlLang.ReplaceAllString(result, `<html lang="`+htmlLang+`"`)
@@ -75,6 +79,78 @@ func renderTemplate(tpl string, tr map[string]string, lang string) string {
 
 	result = setSelectedLang(result, lang)
 	return result
+}
+
+func replaceSEOPlaceholders(html, lang string) string {
+	siteURL := strings.TrimRight(getEnv("SITE_URL", "https://dmcheck.app"), "/")
+	path := "/"
+	if lang != "en" {
+		path = "/" + lang + "/"
+	}
+	html = strings.ReplaceAll(html, "{{SITE_URL}}", siteURL)
+	html = strings.ReplaceAll(html, "{{CANONICAL_URL}}", siteURL+path)
+	html = strings.ReplaceAll(html, "{{APP_VERSION}}", appVersion())
+	return html
+}
+
+func appVersion() string {
+	if v := strings.TrimSpace(os.Getenv("APP_VERSION")); v != "" {
+		return v
+	}
+
+	if info, ok := debug.ReadBuildInfo(); ok {
+		var revision, vcsTime, modified string
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				revision = setting.Value
+			case "vcs.time":
+				vcsTime = setting.Value
+			case "vcs.modified":
+				modified = setting.Value
+			}
+		}
+		if revision != "" {
+			if len(revision) > 7 {
+				revision = revision[:7]
+			}
+			date := time.Now().Format("2006.01.02")
+			if t, err := time.Parse(time.RFC3339, vcsTime); err == nil {
+				date = t.Format("2006.01.02")
+			}
+			suffix := ""
+			if modified == "true" {
+				suffix = "-dirty"
+			}
+			return "v" + date + "-" + revision + suffix
+		}
+	}
+
+	if revision := gitShortRevision(); revision != "" {
+		suffix := ""
+		if gitModified() {
+			suffix = "-dirty"
+		}
+		return "v" + time.Now().Format("2006.01.02") + "-" + revision + suffix
+	}
+
+	return "v" + time.Now().Format("2006.01.02") + "-dev"
+}
+
+func gitShortRevision() string {
+	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func gitModified() bool {
+	out, err := exec.Command("git", "status", "--porcelain").Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) != ""
 }
 
 func replaceI18nAttrs(html string, tr map[string]string) string {
@@ -102,7 +178,7 @@ func replaceI18nAttrs(html string, tr map[string]string) string {
 		keyStart := idx + len(marker)
 		keyEnd := strings.Index(html[keyStart:], `"`)
 		if keyEnd < 0 {
-			b.WriteString(html[pos : keyStart])
+			b.WriteString(html[pos:keyStart])
 			pos = keyStart
 			continue
 		}
@@ -111,7 +187,7 @@ func replaceI18nAttrs(html string, tr map[string]string) string {
 
 		tagClose := strings.Index(html[keyEnd:], ">")
 		if tagClose < 0 {
-			b.WriteString(html[pos : keyEnd])
+			b.WriteString(html[pos:keyEnd])
 			pos = keyEnd
 			continue
 		}
