@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io/fs"
 	"log"
-	"os"
 	"os/exec"
 	"regexp"
 	"runtime/debug"
@@ -30,7 +29,6 @@ func buildLangPages(sfs fs.FS) {
 		log.Fatalf("Cannot read embedded index.html: %v", err)
 	}
 	template := string(tpl)
-	gaID := os.Getenv("GA_ID")
 
 	langPages = make(map[string][]byte, len(allLangs))
 	for _, lang := range allLangs {
@@ -47,8 +45,8 @@ func buildLangPages(sfs fs.FS) {
 			continue
 		}
 		page := renderTemplate(template, tr, lang)
-		if gaID != "" {
-			page = injectGA(page, gaID)
+		if AppConfig.GAID != "" {
+			page = injectGA(page, AppConfig.GAID)
 		}
 		langPages[lang] = []byte(page)
 		log.Printf("Built %s page (%d bytes)", lang, len(langPages[lang]))
@@ -82,20 +80,19 @@ func renderTemplate(tpl string, tr map[string]string, lang string) string {
 }
 
 func replaceSEOPlaceholders(html, lang string) string {
-	siteURL := strings.TrimRight(getEnv("SITE_URL", "https://dmcheck.app"), "/")
 	path := "/"
 	if lang != "en" {
 		path = "/" + lang + "/"
 	}
-	html = strings.ReplaceAll(html, "{{SITE_URL}}", siteURL)
-	html = strings.ReplaceAll(html, "{{CANONICAL_URL}}", siteURL+path)
+	html = strings.ReplaceAll(html, "{{SITE_URL}}", AppConfig.SiteURL)
+	html = strings.ReplaceAll(html, "{{CANONICAL_URL}}", AppConfig.SiteURL+path)
 	html = strings.ReplaceAll(html, "{{APP_VERSION}}", appVersion())
 	return html
 }
 
 func appVersion() string {
-	if v := strings.TrimSpace(os.Getenv("APP_VERSION")); v != "" {
-		return v
+	if AppConfig.AppVersion != "" {
+		return AppConfig.AppVersion
 	}
 
 	if info, ok := debug.ReadBuildInfo(); ok {

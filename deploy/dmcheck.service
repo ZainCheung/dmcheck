@@ -9,8 +9,7 @@ WorkingDirectory=/opt/dmcheck
 ExecStart=/opt/dmcheck/dmcheck
 Restart=always
 RestartSec=5
-Environment=PORT=3300
-Environment=REDIS_ADDR=localhost:6379
+EnvironmentFile=-/opt/dmcheck/dmcheck.env
 
 [Install]
 WantedBy=multi-user.target

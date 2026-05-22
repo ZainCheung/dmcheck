@@ -55,7 +55,7 @@ var registrationData registrationCatalog
 
 func loadRegistrarPrices() {
 	registrationData = registrationCatalog{}
-	if !RegistrarPricesEnabled {
+	if !AppConfig.RegistrarPricesEnabled {
 		log.Printf("Registrar links and price comparison disabled; set REGISTRAR_PRICES_ENABLED=true to enable")
 		return
 	}
@@ -151,7 +151,7 @@ func addRegistrationOptionsToResults(results []DomainResult) {
 }
 
 func registrationOptionsForDomain(domain string) []RegistrationOption {
-	if !RegistrarPricesEnabled {
+	if !AppConfig.RegistrarPricesEnabled {
 		return nil
 	}
 

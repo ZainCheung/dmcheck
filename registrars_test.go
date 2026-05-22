@@ -5,12 +5,12 @@ import "testing"
 func restoreRegistrationState(t *testing.T) {
 	t.Helper()
 	oldData := registrationData
-	oldEnabled := RegistrarPricesEnabled
+	oldConfig := AppConfig
 	t.Cleanup(func() {
 		registrationData = oldData
-		RegistrarPricesEnabled = oldEnabled
+		AppConfig = oldConfig
 	})
-	RegistrarPricesEnabled = true
+	AppConfig.RegistrarPricesEnabled = true
 }
 
 func TestRegistrationOptionsAreSortedAndMarked(t *testing.T) {
@@ -156,7 +156,7 @@ func TestRegistrationOptionsDisabledByFeatureFlag(t *testing.T) {
 		t.Fatalf("configureRegistrationCatalog returned error: %v", err)
 	}
 
-	RegistrarPricesEnabled = false
+	AppConfig.RegistrarPricesEnabled = false
 	options := registrationOptionsForDomain("brand.com")
 	if len(options) != 0 {
 		t.Fatalf("disabled registrationOptionsForDomain returned options: %+v", options)

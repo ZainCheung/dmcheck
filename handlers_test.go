@@ -6,15 +6,11 @@ import (
 )
 
 func TestCacheTTLPolicy(t *testing.T) {
-	oldAvailable := AvailableCacheTTL
-	oldRegistered := RegisteredCacheTTL
-	defer func() {
-		AvailableCacheTTL = oldAvailable
-		RegisteredCacheTTL = oldRegistered
-	}()
+	oldConfig := AppConfig
+	defer func() { AppConfig = oldConfig }()
 
-	AvailableCacheTTL = 0
-	RegisteredCacheTTL = 90 * 24 * time.Hour
+	AppConfig.AvailableCacheTTL = 0
+	AppConfig.RegisteredCacheTTL = 90 * 24 * time.Hour
 	now := time.Date(2026, 5, 14, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
@@ -79,10 +75,10 @@ func TestCacheTTLPolicy(t *testing.T) {
 }
 
 func TestAvailableCacheTTLCanBeEnabled(t *testing.T) {
-	oldAvailable := AvailableCacheTTL
-	defer func() { AvailableCacheTTL = oldAvailable }()
+	oldConfig := AppConfig
+	defer func() { AppConfig = oldConfig }()
 
-	AvailableCacheTTL = 15 * time.Minute
+	AppConfig.AvailableCacheTTL = 15 * time.Minute
 	got, ok := cacheTTL(DomainResult{Status: "available"}, time.Now())
 	if !ok {
 		t.Fatal("cacheTTL did not enable available caching")
