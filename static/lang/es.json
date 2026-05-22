@@ -6,6 +6,7 @@
   "searchPlaceholder": "Ingrese una palabra clave para buscar dominios",
   "clearLabel": "Borrar",
   "themeToggleLabel": "Cambiar tema",
+  "githubLabel": "Ver código fuente en GitHub",
   "searchBtn": "Verificar",
   "searchBtnLoading": "Verificando",
   "tldToggle": "Editar TLDs",

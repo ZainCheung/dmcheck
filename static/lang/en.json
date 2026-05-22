@@ -6,6 +6,7 @@
   "searchPlaceholder": "Enter keyword to check domains",
   "clearLabel": "Clear",
   "themeToggleLabel": "Toggle theme",
+  "githubLabel": "View source on GitHub",
   "searchBtn": "Check",
   "searchBtnLoading": "Checking",
   "tldToggle": "Edit TLDs",

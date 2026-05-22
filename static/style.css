@@ -135,7 +135,8 @@
       gap: 8px;
     }
     .lang-switch,
-    .theme-toggle {
+    .theme-toggle,
+    .github-link {
       border: 1px solid var(--hairline);
       background: color-mix(in oklch, var(--surface) 84%, transparent);
       color: var(--ink);
@@ -143,6 +144,23 @@
       border-radius: var(--radius);
       cursor: pointer;
       transition: border-color 90ms ease-out, background 90ms ease-out, color 90ms ease-out;
+    }
+    .github-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 10px;
+      color: var(--muted);
+      text-decoration: none;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .github-icon {
+      width: 17px;
+      height: 17px;
+      flex: 0 0 auto;
     }
     .lang-switch {
       min-width: 104px;
@@ -157,9 +175,11 @@
       color: var(--muted);
     }
     .lang-switch:hover,
-    .theme-toggle:hover {
+    .theme-toggle:hover,
+    .github-link:hover {
       border-color: var(--primary);
       background: var(--surface);
+      color: var(--ink);
     }
     .intro-line {
       display: flex;
@@ -500,6 +520,7 @@ h1 {
     }
     html[data-theme="carbon"] .lang-switch,
     html[data-theme="carbon"] .theme-toggle,
+    html[data-theme="carbon"] .github-link,
     html[data-theme="carbon"] .suffix-chip,
     html[data-theme="carbon"] .suffix-more,
     html[data-theme="carbon"] .reset-button {
@@ -1588,6 +1609,13 @@ h1 {
   }
   .lang-switch {
     min-width: 92px;
+  }
+  .github-link {
+    width: 36px;
+    padding: 0;
+  }
+  .github-label {
+    display: none;
   }
   .mobile-tld-toggle {
     display: inline-flex;

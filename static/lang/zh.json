@@ -6,6 +6,7 @@
   "searchPlaceholder": "输入关键词查询域名",
   "clearLabel": "清空",
   "themeToggleLabel": "切换主题",
+  "githubLabel": "在 GitHub 查看源码",
   "searchBtn": "查询",
   "searchBtnLoading": "查询中",
   "tldToggle": "编辑后缀",

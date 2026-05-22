@@ -6,6 +6,7 @@
   "searchPlaceholder": "キーワードを入力してドメインを検索",
   "clearLabel": "クリア",
   "themeToggleLabel": "テーマを切り替え",
+  "githubLabel": "GitHubでソースを見る",
   "searchBtn": "確認",
   "searchBtnLoading": "確認中",
   "tldToggle": "TLDを編集",

@@ -6,6 +6,7 @@
   "searchPlaceholder": "키워드를 입력하여 도메인 검색",
   "clearLabel": "지우기",
   "themeToggleLabel": "테마 전환",
+  "githubLabel": "GitHub에서 소스 보기",
   "searchBtn": "확인",
   "searchBtnLoading": "확인 중",
   "tldToggle": "TLD 편집",
