@@ -25,7 +25,7 @@
 ### 前置要求
 
 - Go 1.21+
-- Node.js 18+，用于刷新注册商价格参考数据
+- （可选）Node.js 18+，用于刷新注册商价格参考数据
 - （可选）Redis，用于缓存
 
 ### 本地运行
@@ -51,11 +51,13 @@ go build -o dmcheck .
 | ---- | ---- |
 | `config/whois-servers.json` | TLD → WHOIS 服务器映射 |
 | `config/default-tlds.json` | 展示给用户的默认 TLD 列表 |
-| `config/registrar-prices.json` | 注册商链接模板和已配置的 TLD 价格参考 |
+| `config/registrar-prices.json` | 可选注册商链接模板和已配置的 TLD 价格参考；仅在 `REGISTRAR_PRICES_ENABLED=true` 时使用 |
 
 ### 更新注册商价格参考
 
-`config/registrar-prices.json` 里有两类相关但不同的数据：一类是面向用户展示的注册商跳转/搜索渠道，另一类是用于比价 UI 的自动价格行。某个注册商可以只作为跳转渠道存在，即使它暂时不进入自动价格比价。
+注册商跳转和价格比价是可选功能，默认关闭。需要启用该功能的部署环境应设置 `REGISTRAR_PRICES_ENABLED=true`；如果不设置，新开发者或轻量部署不需要准备注册商价格数据，API 响应也不会返回 `registration_options`。
+
+启用后，`config/registrar-prices.json` 里有两类相关但不同的数据：一类是面向用户展示的注册商跳转/搜索渠道，另一类是用于比价 UI 的自动价格行。某个注册商可以只作为跳转渠道存在，即使它暂时不进入自动价格比价。
 
 当前覆盖情况以 `config/registrar-prices.json` 中的 `updated_at=2026-05-15` 为准：已启用 5 个注册商渠道；价格表总计覆盖 833 个后缀，其中包含 204 个多段后缀。
 
@@ -95,6 +97,7 @@ node scripts/update-registrar-prices.mjs --date=YYYY-MM-DD
 | `AVAILABLE_CACHE_TTL` | `0` | 可注册域名结果缓存时间；`0` 表示禁用可注册结果缓存 |
 | `REGISTERED_CACHE_TTL` | `2160h` | 已注册/保留域名的最大缓存时间；到期前会刷新已注册域名 |
 | `CACHE_TTL` | （空） | `AVAILABLE_CACHE_TTL` 的旧版别名 |
+| `REGISTRAR_PRICES_ENABLED` | `false` | 从 `config/registrar-prices.json` 启用注册商跳转和价格比价 |
 | `GA_ID` | （空） | Google Analytics Measurement ID；留空表示禁用 |
 
 ## 项目结构
@@ -196,6 +199,8 @@ sudo systemctl edit dmcheck
 Environment=RATE_LIMIT=5
 Environment=RATE_BURST=10
 Environment=REGISTERED_CACHE_TTL=2160h
+# 可选：启用注册商跳转和价格比价
+Environment=REGISTRAR_PRICES_ENABLED=true
 Environment=GA_ID=G-XXXXXXXXXX
 ```
 

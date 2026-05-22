@@ -2,9 +2,19 @@ package main
 
 import "testing"
 
+func restoreRegistrationState(t *testing.T) {
+	t.Helper()
+	oldData := registrationData
+	oldEnabled := RegistrarPricesEnabled
+	t.Cleanup(func() {
+		registrationData = oldData
+		RegistrarPricesEnabled = oldEnabled
+	})
+	RegistrarPricesEnabled = true
+}
+
 func TestRegistrationOptionsAreSortedAndMarked(t *testing.T) {
-	old := registrationData
-	defer func() { registrationData = old }()
+	restoreRegistrationState(t)
 
 	err := configureRegistrationCatalog(registrarPriceConfig{
 		Currency:  "USD",
@@ -45,8 +55,7 @@ func TestRegistrationOptionsAreSortedAndMarked(t *testing.T) {
 }
 
 func TestRegistrationOptionsFallbackToGenericLinks(t *testing.T) {
-	old := registrationData
-	defer func() { registrationData = old }()
+	restoreRegistrationState(t)
 
 	err := configureRegistrationCatalog(registrarPriceConfig{
 		Currency:  "USD",
@@ -73,8 +82,7 @@ func TestRegistrationOptionsFallbackToGenericLinks(t *testing.T) {
 }
 
 func TestRegistrationOptionsUseLongestPricedSuffix(t *testing.T) {
-	old := registrationData
-	defer func() { registrationData = old }()
+	restoreRegistrationState(t)
 
 	err := configureRegistrationCatalog(registrarPriceConfig{
 		Currency: "USD",
@@ -107,8 +115,7 @@ func TestRegistrationOptionsUseLongestPricedSuffix(t *testing.T) {
 }
 
 func TestAddRegistrationOptionsOnlyForAvailableDomains(t *testing.T) {
-	old := registrationData
-	defer func() { registrationData = old }()
+	restoreRegistrationState(t)
 
 	err := configureRegistrationCatalog(registrarPriceConfig{
 		Currency: "USD",
@@ -128,5 +135,35 @@ func TestAddRegistrationOptionsOnlyForAvailableDomains(t *testing.T) {
 	registered := addRegistrationOptions(DomainResult{Domain: "brand.com", Status: "registered"})
 	if len(registered.RegistrationOptions) != 0 {
 		t.Fatalf("registered domain got options: %+v", registered.RegistrationOptions)
+	}
+}
+
+func TestRegistrationOptionsDisabledByFeatureFlag(t *testing.T) {
+	restoreRegistrationState(t)
+
+	err := configureRegistrationCatalog(registrarPriceConfig{
+		Currency: "USD",
+		Registrars: []registrarConfig{
+			{ID: "one", Name: "One", Enabled: true, SearchURLTemplate: "https://one.example/?q={domain}"},
+		},
+		Prices: map[string]map[string]tldPriceRow{
+			"com": {
+				"one": {RegistrationUSD: 8.00, RenewalUSD: 9.00},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("configureRegistrationCatalog returned error: %v", err)
+	}
+
+	RegistrarPricesEnabled = false
+	options := registrationOptionsForDomain("brand.com")
+	if len(options) != 0 {
+		t.Fatalf("disabled registrationOptionsForDomain returned options: %+v", options)
+	}
+
+	available := addRegistrationOptions(DomainResult{Domain: "brand.com", Status: "available"})
+	if len(available.RegistrationOptions) != 0 {
+		t.Fatalf("disabled addRegistrationOptions returned options: %+v", available.RegistrationOptions)
 	}
 }

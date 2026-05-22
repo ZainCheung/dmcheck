@@ -25,7 +25,7 @@ Enter a keyword, instantly check whether domains across multiple TLDs are availa
 ### Prerequisites
 
 - Go 1.21+
-- Node.js 18+ for refreshing registrar price references
+- (Optional) Node.js 18+ for refreshing registrar price references
 - (Optional) Redis for caching
 
 ### Run locally
@@ -52,12 +52,14 @@ go build -o dmcheck .
 | --------------------------- | ------------------------------- |
 | `config/whois-servers.json` | TLD → WHOIS server mapping      |
 | `config/default-tlds.json`  | Default TLD list shown to users |
-| `config/registrar-prices.json` | Registrar link templates and configured TLD price references |
+| `config/registrar-prices.json` | Optional registrar link templates and configured TLD price references; used only when `REGISTRAR_PRICES_ENABLED=true` |
 
 
 ### Updating registrar price references
 
-`config/registrar-prices.json` contains two related but separate things: enabled registrar channels for outbound registration/search links, and automated price rows for the comparison UI. A registrar can be available as a link-only channel even when it is not used for automated pricing.
+Registrar links and price comparison are optional and disabled by default. Deployments that want this feature should set `REGISTRAR_PRICES_ENABLED=true`; deployments that leave it unset do not need to prepare registrar price data, and API responses will omit `registration_options`.
+
+When enabled, `config/registrar-prices.json` contains two related but separate things: enabled registrar channels for outbound registration/search links, and automated price rows for the comparison UI. A registrar can be available as a link-only channel even when it is not used for automated pricing.
 
 Current coverage as of `config/registrar-prices.json` `updated_at=2026-05-15`: 5 enabled registrar channels, 833 priced TLDs total, including 204 multi-label TLDs.
 
@@ -99,6 +101,7 @@ Providers intentionally not automated or priced: Namecheap, NameSilo, Spaceship,
 | `AVAILABLE_CACHE_TTL` | `0`              | Cache TTL for available domains; `0` disables available-result caching |
 | `REGISTERED_CACHE_TTL` | `2160h`          | Max cache TTL for registered/reserved domains; registered domains are refreshed before expiry |
 | `CACHE_TTL`  | (empty)          | Legacy alias for `AVAILABLE_CACHE_TTL`                       |
+| `REGISTRAR_PRICES_ENABLED` | `false`          | Enables registrar links and price comparison from `config/registrar-prices.json` |
 | `GA_ID`      | (empty)          | Google Analytics Measurement ID (omit to disable)            |
 
 
@@ -203,6 +206,8 @@ sudo systemctl edit dmcheck
 Environment=RATE_LIMIT=5
 Environment=RATE_BURST=10
 Environment=REGISTERED_CACHE_TTL=2160h
+# Optional: enable registrar links and price comparison
+Environment=REGISTRAR_PRICES_ENABLED=true
 Environment=GA_ID=G-XXXXXXXXXX
 ```
 

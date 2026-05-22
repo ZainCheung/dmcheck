@@ -15,17 +15,18 @@ import (
 var configFiles embed.FS
 
 var (
-	AvailableCacheTTL  time.Duration
-	RegisteredCacheTTL = 90 * 24 * time.Hour
-	RateLimit          = rate.Limit(2)
-	RateBurst          = 5
+	AvailableCacheTTL      time.Duration
+	RegisteredCacheTTL     = 90 * 24 * time.Hour
+	RateLimit              = rate.Limit(2)
+	RateBurst              = 5
+	RegistrarPricesEnabled bool
 )
 
 func loadConfig() {
 	loadWhoisServers()
 	loadDefaultTLDs()
-	loadRegistrarPrices()
 	loadEnvConfig()
+	loadRegistrarPrices()
 }
 
 func loadWhoisServers() {
@@ -86,6 +87,13 @@ func loadEnvConfig() {
 	if v := os.Getenv("REGISTERED_CACHE_TTL"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			RegisteredCacheTTL = d
+		}
+	}
+	if v := os.Getenv("REGISTRAR_PRICES_ENABLED"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			RegistrarPricesEnabled = b
+		} else {
+			log.Printf("Invalid REGISTRAR_PRICES_ENABLED=%q; expected true or false", v)
 		}
 	}
 }
