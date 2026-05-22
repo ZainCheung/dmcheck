@@ -26,8 +26,8 @@ dmcheck is designed for fast, repeated domain screening: enter one keyword, scan
 - **83 TLDs** preconfigured with WHOIS servers; 1000+ TLDs supported via RDAP fallback
 - **Customizable TLD list** — users can edit their TLD list in-browser (saved to localStorage)
 - **Domain detail panel** — registration dates, registrar, DNS servers, status codes, raw WHOIS, optional site screenshot & favicon
-- **Registrar links and price comparison** — available domains can show configured registrar links, first-year USD reference prices, and a detail-drawer comparison
 - **Result image export** — compact PNG preview with copy, download, and system share actions
+- **Optional registrar links and price comparison** — when enabled, available domains can show configured registrar links, first-year USD reference prices, and a detail-drawer comparison
 - **Reserved domain detection** — identifies registry-reserved domains separately from registered or available
 - **Multi-language** — English (default), 中文, 日本語, 한국어, Español
 - **Redis caching** — optional; gracefully degrades to no-cache mode
@@ -39,7 +39,7 @@ dmcheck is designed for fast, repeated domain screening: enter one keyword, scan
 ### Prerequisites
 
 - Go 1.21+
-- Node.js 18+ for refreshing registrar price references
+- (Optional) Node.js 18+ for refreshing registrar price references
 - (Optional) Redis for caching
 
 ### Run locally
@@ -66,10 +66,14 @@ go build -o dmcheck .
 | --------------------------- | ------------------------------- |
 | `config/whois-servers.json` | TLD → WHOIS server mapping      |
 | `config/default-tlds.json`  | Default TLD list shown to users |
-| `config/registrar-prices.json` | Registrar link templates and configured TLD price references |
+| `config/registrar-prices.json` | Optional registrar link templates and configured TLD price references; used only when `REGISTRAR_PRICES_ENABLED=true` |
 
 
-### Updating registrar price references
+### Registrar links and price comparison
+
+dmcheck can run as a plain domain availability checker with no registrar data. This is the default mode and only requires Go. In this mode, `config/registrar-prices.json` is ignored, API responses omit `registration_options`, and the UI does not show registrar actions or price comparison.
+
+Set `REGISTRAR_PRICES_ENABLED=true` to enable the optional registrar module. When enabled, available-domain results include registrar search/register links, first-year USD reference prices where available, and the comparison drawer in the UI.
 
 `config/registrar-prices.json` contains two related but separate things: enabled registrar channels for outbound registration/search links, and automated price rows for the comparison UI. A registrar can be available as a link-only channel even when it is not used for automated pricing.
 
@@ -84,6 +88,8 @@ Current coverage as of `config/registrar-prices.json` `updated_at=2026-05-15`: 5
 | Dynadot | Registration/search link and price comparison | 810 | Automated from official public pricing page | Used for broad TLD coverage, including many multi-label TLDs. |
 
 NameSilo and GoDaddy have been evaluated but are not enabled channels in the current config. They are kept out until we have a stable unattended source or an intentional credential-backed integration.
+
+### Updating registrar price references
 
 ```bash
 node scripts/update-registrar-prices.mjs --date=YYYY-MM-DD
@@ -103,6 +109,9 @@ Providers intentionally not automated or priced: Namecheap, NameSilo, Spaceship,
 
 ### Environment variables
 
+All runtime environment variables are read in `config.go` and stored in the global `AppConfig`. Other packages should read configuration from `AppConfig` instead of calling `os.Getenv` directly.
+
+For systemd deployments, keep overrides in one server-side file: `/opt/dmcheck/dmcheck.env`. The provided `deploy/dmcheck.service` loads it through `EnvironmentFile`. This file is not committed or deployed by GitHub Actions, so create it once on the server or copy a local private copy securely.
 
 | Variable     | Default          | Description                                                  |
 | ------------ | ---------------- | ------------------------------------------------------------ |
@@ -113,7 +122,10 @@ Providers intentionally not automated or priced: Namecheap, NameSilo, Spaceship,
 | `AVAILABLE_CACHE_TTL` | `0`              | Cache TTL for available domains; `0` disables available-result caching |
 | `REGISTERED_CACHE_TTL` | `2160h`          | Max cache TTL for registered/reserved domains; registered domains are refreshed before expiry |
 | `CACHE_TTL`  | (empty)          | Legacy alias for `AVAILABLE_CACHE_TTL`                       |
+| `REGISTRAR_PRICES_ENABLED` | `false`          | Enables registrar links and price comparison from `config/registrar-prices.json` |
 | `GA_ID`      | (empty)          | Google Analytics Measurement ID (omit to disable)            |
+| `SITE_URL`   | `https://dmcheck.app` | Canonical site URL used in rendered SEO metadata             |
+| `APP_VERSION` | build metadata  | Optional fixed version string shown in the UI; leave empty to use build/git metadata |
 
 
 ## Project Structure
@@ -123,7 +135,7 @@ Providers intentionally not automated or priced: Namecheap, NameSilo, Spaceship,
 ├── whois.go             # WHOIS/RDAP query logic
 ├── handlers.go          # HTTP handlers (search, whois API)
 ├── ratelimit.go         # IP-based rate limiter
-├── config.go            # Configuration loading
+├── config.go            # Configuration and environment loading
 ├── config/
 │   ├── whois-servers.json
 │   ├── default-tlds.json
@@ -143,7 +155,7 @@ Providers intentionally not automated or priced: Namecheap, NameSilo, Spaceship,
 │   ├── tos.html
 │   ├── privacy.html
 │   └── legal.css
-└── deploy/              # systemd & nginx configs
+└── deploy/              # systemd, env-file & nginx configs
 ```
 
 ## Deployment
@@ -157,9 +169,11 @@ Providers intentionally not automated or priced: Namecheap, NameSilo, Spaceship,
 ### 2. First-time server setup
 
 ```bash
-# Create application directory
+# Create application directory and server-side env file
 sudo mkdir -p /opt/dmcheck
 sudo chown deployer:deployer /opt/dmcheck
+sudo install -m 0644 deploy/dmcheck.env.example /opt/dmcheck/dmcheck.env
+sudo chown deployer:deployer /opt/dmcheck/dmcheck.env
 
 # Build locally and upload (or let GitHub Actions do it)
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dmcheck .
@@ -202,25 +216,33 @@ Add these secrets in your GitHub repo (Settings → Secrets → Actions):
 | `VPS_SSH_KEY` | Private key for SSH access |
 
 
-Flow: `git push origin publish` → GitHub Actions builds `linux/amd64` binary → `scp` to VPS → `systemctl restart dmcheck`.
+Flow: `git push origin publish` → GitHub Actions builds `linux/amd64` binary → `scp` to VPS → `systemctl restart dmcheck`. The workflow deploys the binary only; it does not upload or overwrite `/opt/dmcheck/dmcheck.env`.
 
 ### 6. Environment variables on VPS
 
-Edit the systemd service to add environment variables:
+Edit the environment file loaded by systemd. This is a persistent server-side file, not a committed repo file:
 
 ```bash
-sudo systemctl edit dmcheck
+sudo nano /opt/dmcheck/dmcheck.env
 ```
 
-```ini
-[Service]
-Environment=RATE_LIMIT=5
-Environment=RATE_BURST=10
-Environment=REGISTERED_CACHE_TTL=2160h
-Environment=GA_ID=G-XXXXXXXXXX
+```env
+RATE_LIMIT=5
+RATE_BURST=10
+REGISTERED_CACHE_TTL=2160h
+REGISTRAR_PRICES_ENABLED=true
+GA_ID=G-XXXXXXXXXX
+SITE_URL=https://dmcheck.app
+# Leave empty to use the build/git-derived version.
+APP_VERSION=
 ```
 
-Then `sudo systemctl restart dmcheck`.
+Then run:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart dmcheck
+```
 
 ## Acknowledgments
 

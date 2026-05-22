@@ -54,6 +54,12 @@ type registrationCatalog struct {
 var registrationData registrationCatalog
 
 func loadRegistrarPrices() {
+	registrationData = registrationCatalog{}
+	if !AppConfig.RegistrarPricesEnabled {
+		log.Printf("Registrar links and price comparison disabled; set REGISTRAR_PRICES_ENABLED=true to enable")
+		return
+	}
+
 	data, err := readConfigFile("config/registrar-prices.json")
 	if err != nil {
 		data, err = configFiles.ReadFile("config/registrar-prices.json")
@@ -145,6 +151,10 @@ func addRegistrationOptionsToResults(results []DomainResult) {
 }
 
 func registrationOptionsForDomain(domain string) []RegistrationOption {
+	if !AppConfig.RegistrarPricesEnabled {
+		return nil
+	}
+
 	domain = normalizeDomain(domain)
 	tld := domainTLD(domain)
 	if domain == "" || tld == "" {

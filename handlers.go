@@ -278,20 +278,20 @@ func normalizeDomain(domain string) string {
 func cacheTTL(result DomainResult, now time.Time) (time.Duration, bool) {
 	switch result.Status {
 	case "available":
-		if AvailableCacheTTL <= 0 {
+		if AppConfig.AvailableCacheTTL <= 0 {
 			return 0, false
 		}
-		return AvailableCacheTTL, true
+		return AppConfig.AvailableCacheTTL, true
 	case "reserved":
-		if RegisteredCacheTTL <= 0 {
+		if AppConfig.RegisteredCacheTTL <= 0 {
 			return 0, false
 		}
-		return RegisteredCacheTTL, true
+		return AppConfig.RegisteredCacheTTL, true
 	case "registered":
-		if RegisteredCacheTTL <= 0 {
+		if AppConfig.RegisteredCacheTTL <= 0 {
 			return 0, false
 		}
-		ttl := RegisteredCacheTTL
+		ttl := AppConfig.RegisteredCacheTTL
 		if result.Expires == "" {
 			if ttl > 24*time.Hour {
 				ttl = 24 * time.Hour

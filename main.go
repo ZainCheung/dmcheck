@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -26,19 +25,18 @@ var staticFiles embed.FS
 func main() {
 	loadConfig()
 
-	port := getEnv("PORT", "3300")
-	redisAddr := getEnv("REDIS_ADDR", "localhost:6379")
-
 	var rdb *redis.Client
-	if conn, err := net.DialTimeout("tcp", redisAddr, 2*time.Second); err != nil {
-		log.Printf("Redis not available at %s, running without cache", redisAddr)
+	if AppConfig.RedisAddr == "" {
+		log.Printf("Redis disabled, running without cache")
+	} else if conn, err := net.DialTimeout("tcp", AppConfig.RedisAddr, 2*time.Second); err != nil {
+		log.Printf("Redis not available at %s, running without cache", AppConfig.RedisAddr)
 	} else {
 		conn.Close()
-		rdb = redis.NewClient(&redis.Options{Addr: redisAddr})
-		log.Printf("Redis connected at %s", redisAddr)
+		rdb = redis.NewClient(&redis.Options{Addr: AppConfig.RedisAddr})
+		log.Printf("Redis connected at %s", AppConfig.RedisAddr)
 	}
 
-	limiter := NewRateLimiter(RateLimit, RateBurst)
+	limiter := NewRateLimiter(AppConfig.RateLimit, AppConfig.RateBurst)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/search", handleSearch(rdb))
@@ -55,7 +53,7 @@ func main() {
 	handler := limiter.Middleware(corsMiddleware(mux))
 
 	srv := &http.Server{
-		Addr:         ":" + port,
+		Addr:         ":" + AppConfig.Port,
 		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 120 * time.Second,
@@ -66,7 +64,7 @@ func main() {
 	defer stop()
 
 	go func() {
-		log.Printf("dmcheck service listening on :%s", port)
+		log.Printf("dmcheck service listening on :%s", AppConfig.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
@@ -128,11 +126,4 @@ func corsMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-func getEnv(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
 }
