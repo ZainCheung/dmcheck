@@ -1306,7 +1306,6 @@
         '<button type="button" class="preview-load-btn">' + esc(T('loadPreviewBtn')) + '</button>' +
       '</div>' +
       '<div class="preview-site-link">' +
-        '<img class="preview-favicon" src="https://favicon.im/' + d + '" alt="" loading="lazy">' +
         '<a href="http://' + d + '" target="_blank" rel="noopener">' + d + ' ↗</a>' +
       '</div>';
 
@@ -1354,6 +1353,7 @@
     if (!wrap) return;
     wrap.className = 'preview-shot-wrap preview-shot-loading';
     wrap.innerHTML = '<p class="panel-status-hint">' + esc(T('previewLoading')) + '</p>';
+    loadPanelFavicon(domain);
 
     const img = document.createElement('img');
     img.className = 'preview-shot';
@@ -1369,6 +1369,17 @@
       wrap.innerHTML = '<p class="preview-placeholder-title">' + esc(T('previewLoadFail')) + '</p>';
     });
     img.src = 'https://screenshot.domains/' + encodeURIComponent(domain);
+  }
+
+  function loadPanelFavicon(domain) {
+    const siteLink = panelBody.querySelector('.preview-site-link');
+    if (!siteLink || siteLink.querySelector('.preview-favicon')) return;
+    const img = document.createElement('img');
+    img.className = 'preview-favicon';
+    img.alt = '';
+    img.loading = 'lazy';
+    img.src = 'https://favicon.im/' + encodeURIComponent(domain);
+    siteLink.prepend(img);
   }
 
   function infoRow(label, value) {

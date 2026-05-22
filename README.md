@@ -12,7 +12,7 @@ Enter a keyword, instantly check whether domains across multiple TLDs are availa
 - **WHOIS + RDAP** — direct queries to registry WHOIS servers (port 43) with RDAP fallback via IANA bootstrap
 - **83 TLDs** preconfigured with WHOIS servers; 1000+ TLDs supported via RDAP fallback
 - **Customizable TLD list** — users can edit their TLD list in-browser (saved to localStorage)
-- **Domain detail panel** — registration dates, registrar, DNS servers, status codes, raw WHOIS, site screenshot & favicon
+- **Domain detail panel** — registration dates, registrar, DNS servers, status codes, raw WHOIS, optional site screenshot & favicon
 - **Registrar links and price comparison** — available domains can show configured registrar links, first-year USD reference prices, and a detail-drawer comparison
 - **Reserved domain detection** — identifies registry-reserved domains separately from registered or available
 - **Multi-language** — English (default), 中文, 日本語, 한국어, Español
