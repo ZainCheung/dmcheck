@@ -127,6 +127,7 @@ func handleSearch(rdb *redis.Client) http.HandlerFunc {
 		for i := range results {
 			results[i].RawWhois = ""
 		}
+		addRegistrationOptionsToResults(results)
 		writeJSON(w, http.StatusOK, results)
 	}
 }
@@ -145,6 +146,7 @@ func handleSearchSSE(w http.ResponseWriter, r *http.Request, rdb *redis.Client, 
 
 	sendEvent := func(result DomainResult) {
 		result.RawWhois = ""
+		result = addRegistrationOptions(result)
 		data, _ := json.Marshal(result)
 		fmt.Fprintf(w, "data: %s\n\n", data)
 		flusher.Flush()
@@ -202,6 +204,7 @@ func handleWhois(rdb *redis.Client) http.HandlerFunc {
 
 		if r.URL.Query().Get("preview") == "true" {
 			if cached, ok := getCache(r.Context(), rdb, domain); ok {
+				cached = addRegistrationOptions(cached)
 				writeJSON(w, http.StatusOK, cached)
 				return
 			}
@@ -211,6 +214,7 @@ func handleWhois(rdb *redis.Client) http.HandlerFunc {
 
 		result := CheckDomain(domain)
 		setCache(r.Context(), rdb, domain, result)
+		result = addRegistrationOptions(result)
 		writeJSON(w, http.StatusOK, result)
 	}
 }

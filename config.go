@@ -24,6 +24,7 @@ var (
 func loadConfig() {
 	loadWhoisServers()
 	loadDefaultTLDs()
+	loadRegistrarPrices()
 	loadEnvConfig()
 }
 

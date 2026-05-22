@@ -135,7 +135,8 @@
       gap: 8px;
     }
     .lang-switch,
-    .theme-toggle {
+    .theme-toggle,
+    .github-link {
       border: 1px solid var(--hairline);
       background: color-mix(in oklch, var(--surface) 84%, transparent);
       color: var(--ink);
@@ -143,6 +144,23 @@
       border-radius: var(--radius);
       cursor: pointer;
       transition: border-color 90ms ease-out, background 90ms ease-out, color 90ms ease-out;
+    }
+    .github-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 10px;
+      color: var(--muted);
+      text-decoration: none;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .github-icon {
+      width: 17px;
+      height: 17px;
+      flex: 0 0 auto;
     }
     .lang-switch {
       min-width: 104px;
@@ -157,9 +175,11 @@
       color: var(--muted);
     }
     .lang-switch:hover,
-    .theme-toggle:hover {
+    .theme-toggle:hover,
+    .github-link:hover {
       border-color: var(--primary);
       background: var(--surface);
+      color: var(--ink);
     }
     .intro-line {
       display: flex;
@@ -500,6 +520,7 @@ h1 {
     }
     html[data-theme="carbon"] .lang-switch,
     html[data-theme="carbon"] .theme-toggle,
+    html[data-theme="carbon"] .github-link,
     html[data-theme="carbon"] .suffix-chip,
     html[data-theme="carbon"] .suffix-more,
     html[data-theme="carbon"] .reset-button {
@@ -685,10 +706,10 @@ h1 {
       background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--hairline) 78%, transparent) 8%, color-mix(in oklch, var(--hairline) 78%, transparent) 92%, transparent);
     }
     .domain-row:last-child::after { display: none; }
-    .domain-row[data-openable="true"], .domain-row[data-copyable="true"] {
+    .domain-row[data-openable="true"] {
       cursor: pointer;
     }
-    .domain-row:hover,
+    .domain-row[data-openable="true"]:hover,
     .domain-row:focus-within,
     .domain-row.active {
       background: var(--blue-soft);
@@ -824,6 +845,60 @@ h1 {
       border-color: oklch(0.75 0.12 70);
       background: var(--amber-soft);
     }
+    .available-actions {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+    .price-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 9px;
+      border: 1px solid color-mix(in oklch, var(--green) 62%, var(--hairline));
+      border-radius: var(--radius);
+      background: color-mix(in oklch, var(--green-soft) 82%, var(--surface));
+      color: oklch(0.31 0.1 150);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 780;
+      white-space: nowrap;
+    }
+    .register-link,
+    .compare-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--hairline);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 780;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .register-link {
+      border-color: var(--green);
+      background: var(--green);
+      color: var(--bg);
+    }
+    .compare-chip:hover,
+    .register-link:hover {
+      border-color: color-mix(in oklch, var(--green) 82%, white);
+      background: color-mix(in oklch, var(--green) 18%, var(--surface));
+      color: oklch(0.32 0.11 150);
+    }
+    .register-link:hover {
+      background: color-mix(in oklch, var(--green) 88%, white);
+      color: var(--bg);
+    }
     .copy-chip {
       min-width: 58px;
       height: 28px;
@@ -859,6 +934,14 @@ h1 {
       border-color: color-mix(in oklch, var(--green) 82%, white);
       background: color-mix(in oklch, var(--green) 82%, white);
       color: var(--bg);
+    }
+    html[data-theme="carbon"] .price-chip {
+      color: var(--green);
+      background: color-mix(in oklch, var(--green) 14%, var(--surface));
+    }
+    html[data-theme="carbon"] .compare-chip {
+      background: var(--surface-2);
+      color: var(--ink);
     }
     .date-cell {
       color: var(--muted);
@@ -1362,6 +1445,93 @@ h1 {
       color: var(--muted);
       line-height: 1.45;
     }
+    .registrar-list {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .registrar-option {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .registrar-option.lowest {
+      border-color: color-mix(in oklch, var(--green) 56%, var(--hairline));
+      background: color-mix(in oklch, var(--green-soft) 64%, var(--surface));
+    }
+    .registrar-main {
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .registrar-main strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .lowest-mark {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 0 7px;
+      border-radius: var(--radius);
+      background: var(--green);
+      color: var(--bg);
+      font-size: 11px;
+      font-weight: 780;
+    }
+    .registrar-price {
+      justify-self: end;
+      font-family: var(--mono);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 820;
+      white-space: nowrap;
+    }
+    .registrar-meta {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .registrar-meta a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .registrar-register {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--green);
+      border-radius: var(--radius);
+      background: var(--green);
+      color: var(--bg);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 780;
+      white-space: nowrap;
+    }
+    .registrar-register:hover {
+      border-color: color-mix(in oklch, var(--green) 82%, white);
+      background: color-mix(in oklch, var(--green) 88%, white);
+    }
+    .price-disclaimer {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
     .kv {
       display: grid;
       grid-template-columns: 128px minmax(0, 1fr);
@@ -1439,6 +1609,13 @@ h1 {
   }
   .lang-switch {
     min-width: 92px;
+  }
+  .github-link {
+    width: 36px;
+    padding: 0;
+  }
+  .github-label {
+    display: none;
   }
   .mobile-tld-toggle {
     display: inline-flex;
@@ -1526,10 +1703,20 @@ h1 {
         justify-content: flex-start;
         flex-wrap: wrap;
       }
+      .available-actions {
+        justify-content: flex-start;
+      }
       .domain-row.available .copy-chip {
         opacity: 1;
         pointer-events: auto;
         transform: none;
+      }
+      .registrar-option {
+        grid-template-columns: 1fr;
+      }
+      .registrar-price,
+      .registrar-register {
+        justify-self: start;
       }
       .date-cell {
         grid-column: 1;
