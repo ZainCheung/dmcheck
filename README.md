@@ -13,7 +13,7 @@ Enter a keyword, instantly check whether domains across multiple TLDs are availa
 - **83 TLDs** preconfigured with WHOIS servers; 1000+ TLDs supported via RDAP fallback
 - **Customizable TLD list** — users can edit their TLD list in-browser (saved to localStorage)
 - **Domain detail panel** — registration dates, registrar, DNS servers, status codes, raw WHOIS, optional site screenshot & favicon
-- **Registrar links and price comparison** — available domains can show configured registrar links, first-year USD reference prices, and a detail-drawer comparison
+- **Optional registrar links and price comparison** — when enabled, available domains can show configured registrar links, first-year USD reference prices, and a detail-drawer comparison
 - **Reserved domain detection** — identifies registry-reserved domains separately from registered or available
 - **Multi-language** — English (default), 中文, 日本語, 한국어, Español
 - **Redis caching** — optional; gracefully degrades to no-cache mode
@@ -55,11 +55,13 @@ go build -o dmcheck .
 | `config/registrar-prices.json` | Optional registrar link templates and configured TLD price references; used only when `REGISTRAR_PRICES_ENABLED=true` |
 
 
-### Updating registrar price references
+### Registrar links and price comparison
 
-Registrar links and price comparison are optional and disabled by default. Deployments that want this feature should set `REGISTRAR_PRICES_ENABLED=true`; deployments that leave it unset do not need to prepare registrar price data, and API responses will omit `registration_options`.
+dmcheck can run as a plain domain availability checker with no registrar data. This is the default mode and only requires Go. In this mode, `config/registrar-prices.json` is ignored, API responses omit `registration_options`, and the UI does not show registrar actions or price comparison.
 
-When enabled, `config/registrar-prices.json` contains two related but separate things: enabled registrar channels for outbound registration/search links, and automated price rows for the comparison UI. A registrar can be available as a link-only channel even when it is not used for automated pricing.
+Set `REGISTRAR_PRICES_ENABLED=true` to enable the optional registrar module. When enabled, available-domain results include registrar search/register links, first-year USD reference prices where available, and the comparison drawer in the UI.
+
+`config/registrar-prices.json` contains two related but separate things: enabled registrar channels for outbound registration/search links, and automated price rows for the comparison UI. A registrar can be available as a link-only channel even when it is not used for automated pricing.
 
 Current coverage as of `config/registrar-prices.json` `updated_at=2026-05-15`: 5 enabled registrar channels, 833 priced TLDs total, including 204 multi-label TLDs.
 
@@ -72,6 +74,8 @@ Current coverage as of `config/registrar-prices.json` `updated_at=2026-05-15`: 5
 | Dynadot | Registration/search link and price comparison | 810 | Automated from official public pricing page | Used for broad TLD coverage, including many multi-label TLDs. |
 
 NameSilo and GoDaddy have been evaluated but are not enabled channels in the current config. They are kept out until we have a stable unattended source or an intentional credential-backed integration.
+
+### Updating registrar price references
 
 ```bash
 node scripts/update-registrar-prices.mjs --date=YYYY-MM-DD

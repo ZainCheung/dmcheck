@@ -13,7 +13,7 @@
 - **预置 83 个 TLD**，并可通过 RDAP fallback 支持 1000+ 后缀
 - **可自定义 TLD 列表** — 用户可在浏览器内编辑后缀列表，并保存到 localStorage
 - **域名详情面板** — 展示注册日期、注册商、DNS 服务器、状态码、原始 WHOIS，以及可选加载的网站截图和 favicon
-- **注册商链接和价格比价** — 可注册域名可展示注册商跳转链接、首年美元参考价，以及详情抽屉中的注册商比价
+- **可选注册商跳转和价格比价** — 启用后，可注册域名可展示注册商跳转链接、首年美元参考价，以及详情抽屉中的注册商比价
 - **保留域名识别** — 将注册局保留域名与已注册、可注册域名区分开
 - **多语言** — English（默认）、中文、日本語、한국어、Español
 - **Redis 缓存** — 可选；未配置时会自动降级为无缓存模式
@@ -53,11 +53,13 @@ go build -o dmcheck .
 | `config/default-tlds.json` | 展示给用户的默认 TLD 列表 |
 | `config/registrar-prices.json` | 可选注册商链接模板和已配置的 TLD 价格参考；仅在 `REGISTRAR_PRICES_ENABLED=true` 时使用 |
 
-### 更新注册商价格参考
+### 注册商跳转和价格比价
 
-注册商跳转和价格比价是可选功能，默认关闭。需要启用该功能的部署环境应设置 `REGISTRAR_PRICES_ENABLED=true`；如果不设置，新开发者或轻量部署不需要准备注册商价格数据，API 响应也不会返回 `registration_options`。
+dmcheck 可以作为纯域名可用性查询工具运行，不需要任何注册商数据。这是默认模式，只需要 Go 即可启动。在该模式下，`config/registrar-prices.json` 会被忽略，API 响应不会返回 `registration_options`，前端也不会展示注册商操作或价格比价。
 
-启用后，`config/registrar-prices.json` 里有两类相关但不同的数据：一类是面向用户展示的注册商跳转/搜索渠道，另一类是用于比价 UI 的自动价格行。某个注册商可以只作为跳转渠道存在，即使它暂时不进入自动价格比价。
+设置 `REGISTRAR_PRICES_ENABLED=true` 后，会启用可选的注册商模块。启用后，可注册域名结果会包含注册商搜索/注册链接、可用的首年美元参考价，以及前端详情抽屉中的比价视图。
+
+`config/registrar-prices.json` 里有两类相关但不同的数据：一类是面向用户展示的注册商跳转/搜索渠道，另一类是用于比价 UI 的自动价格行。某个注册商可以只作为跳转渠道存在，即使它暂时不进入自动价格比价。
 
 当前覆盖情况以 `config/registrar-prices.json` 中的 `updated_at=2026-05-15` 为准：已启用 5 个注册商渠道；价格表总计覆盖 833 个后缀，其中包含 204 个多段后缀。
 
@@ -70,6 +72,8 @@ go build -o dmcheck .
 | Dynadot | 注册/搜索跳转 + 比价 | 810 | 从官方公开价格页自动更新 | 用于提供较广的 TLD 价格覆盖，也包含较多多段后缀。 |
 
 NameSilo 和 GoDaddy 已经过评估，但当前配置中还没有启用为渠道。只有当我们拿到稳定的无人值守公开数据源，或明确要做带凭证的集成时，才会加入。
+
+### 更新注册商价格参考
 
 ```bash
 node scripts/update-registrar-prices.mjs --date=YYYY-MM-DD
